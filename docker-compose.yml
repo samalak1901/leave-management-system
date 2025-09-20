@@ -1,19 +1,19 @@
 version: '3.8'
+
 services:
-backend:
-build:
-context: ./backend
-env_file: ./backend/.env
-ports:
-- "4000:4000"
-command: ["node", "dist/server.js"]
+  backend:
+    build:
+      context: ./backend
+    env_file: ./backend/.env
+    ports:
+      - "4000:4000"
+    command: ["node", "dist/server.js"]
 
-
-frontend:
-build:
-context: ./frontend
-env_file: ./frontend/.env
-ports:
-- "3000:80"
-depends_on:
-- backend
+  frontend:
+    build:
+      context: ./frontend
+    env_file: ./frontend/.env
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
