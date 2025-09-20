@@ -4,9 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "start": "ts-node src/server.ts",
     "build": "tsc",
-    "seed": "ts-node src/seed/seed.ts"
+    "start": "node dist/server.ts"
   }, 
   
   "keywords": [],
