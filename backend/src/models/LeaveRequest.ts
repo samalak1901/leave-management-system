@@ -19,6 +19,8 @@ export interface ILeaveRequest {
     reason: string;
     status: LeaveStatus;
     managerId?: Types.ObjectId | null;
+    emergencyContact?: string;
+    workHandover?: string;
     hrOverride?: boolean;
     comments?: string;
     auditTrail: IAudit[];
@@ -33,22 +35,27 @@ const LeaveRequestSchema = new Schema<ILeaveRequest>(
         startDate: { type: Date, required: true },
         endDate: { type: Date, required: true },
         reason: { type: String, required: true },
-        status: { 
-            type: String, 
-            enum: ['pending', 'approved', 'rejected', 'cancelled'], 
-            default: 'pending' 
+        status: {
+            type: String,
+            enum: ['pending', 'approved', 'rejected', 'cancelled'],
+            default: 'pending'
         },
         managerId: { type: Schema.Types.ObjectId, ref: 'User', default: null },
         hrOverride: { type: Boolean, default: false },
         comments: { type: String, default: '' },
-        auditTrail: [
-            {
-                action: String,
-                by: { type: Schema.Types.ObjectId, ref: 'User' },
-                at: { type: Date, default: Date.now },
-                meta: Schema.Types.Mixed,
-            },
-        ],
+        emergencyContact: { type: String, default: '' },
+        workHandover: { type: String, default: '' },
+        auditTrail: {
+            type: [
+                {
+                    action: { type: String, required: true },
+                    by: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+                    at: { type: Date, default: Date.now },
+                    meta: Schema.Types.Mixed
+                }
+            ],
+            default: []
+        }
     },
     { timestamps: true }
 );

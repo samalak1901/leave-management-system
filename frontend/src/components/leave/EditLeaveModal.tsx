@@ -45,7 +45,7 @@ const EditLeaveModal: React.FC<EditLeaveModalProps> = ({ request, onClose, onSuc
   useEffect(() => {
     const fetchRequest = async () => {
       try {
-        const leaves = await leaveService.list({ _id: request.id });
+        const leaves = await leaveService.list({ _id: request._id });
         if (leaves.length === 0) {
           setError('Leave request not found');
           setLoading(false);

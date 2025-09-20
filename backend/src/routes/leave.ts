@@ -32,7 +32,7 @@ router.post(
   [
     body('startDate').isISO8601().withMessage('Start date must be a valid date'),
     body('endDate').isISO8601().withMessage('End date must be a valid date'),
-    body('leaveType').notEmpty().withMessage('Leave type is required'),
+    body('type').isIn(['annual', 'sick', 'unpaid']).withMessage('Leave type must be one of annual, sick, or unpaid'),
     body('reason').optional().isString().withMessage('Reason must be a string'),
   ],
   validateRequest,
@@ -43,7 +43,7 @@ router.post(
 router.get(
   '/',
   authMiddleware,
-  ensureRole(['employee', 'manager', 'hr']),
+  ensureRole(['employee', 'manager', 'hr']), 
   listLeaves
 );
 

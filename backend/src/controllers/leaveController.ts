@@ -6,6 +6,7 @@ import { AuthRequest } from '../middlewares/auth';
 import { leaveConfig } from '../config/leaveConfig';
 import { Parser } from 'json2csv';
 
+// Calculate total days (with optional business day filter)
 function calculateTotalDays(startDate: Date, endDate: Date, businessDaysOnly = leaveConfig.countBusinessDaysOnly): number {
   const msPerDay = 1000 * 60 * 60 * 24;
   let totalDays = Math.ceil((endDate.getTime() - startDate.getTime()) / msPerDay) + 1;
@@ -19,6 +20,7 @@ function calculateTotalDays(startDate: Date, endDate: Date, businessDaysOnly = l
   }
   return count;
 }
+
 
 // Apply for leave
 export const applyLeave = async (req: AuthRequest, res: Response) => {
@@ -42,7 +44,7 @@ export const applyLeave = async (req: AuthRequest, res: Response) => {
     const totalDays = calculateTotalDays(start, end, false);
 
     // Check leave balance
-    if (type !== 'unpaid' && user.leaveBalances[type] < totalDays) {
+    if (type !== 'unpaid' && (user.leaveBalances[type] ?? 0) < totalDays) {
       await session.abortTransaction();
       return res.status(400).json({ message: 'Insufficient leave balance' });
     }
@@ -62,9 +64,9 @@ export const applyLeave = async (req: AuthRequest, res: Response) => {
       return res.status(400).json({ message: 'Overlapping leave exists' });
     }
 
-    // Deduct balance for non-unpaid leaves
+    // Deduct balance
     if (type !== 'unpaid') {
-      user.leaveBalances[type] -= totalDays;
+      user.leaveBalances[type] = (user.leaveBalances[type] ?? 0) - totalDays;
       await User.findByIdAndUpdate(user._id, { leaveBalances: user.leaveBalances }, { session });
     }
 
@@ -100,7 +102,6 @@ export const applyLeave = async (req: AuthRequest, res: Response) => {
 };
 
 
-
 // Approve / Reject leave (Manager or HR)
 export const updateLeaveStatus = async (req: AuthRequest, res: Response) => {
   const session = await mongoose.startSession();
@@ -120,17 +121,14 @@ export const updateLeaveStatus = async (req: AuthRequest, res: Response) => {
     const isHR = user.role === 'hr';
     const isManager = user.role === 'manager';
 
-    // Prevent self-approval
     if (isManager && leave.userId.equals(user._id))
       return res.status(403).json({ message: 'Cannot approve your own leave' });
 
-    // HR override logic
     if (isHR && !['approved', 'rejected'].includes(oldStatus)) {
       await session.abortTransaction();
       return res.status(400).json({ message: 'HR can only override after manager decision' });
     }
 
-    // Manager can't override HR decision
     if (isManager && leave.hrOverride) {
       await session.abortTransaction();
       return res.status(403).json({ message: 'Cannot override HR decision' });
@@ -140,30 +138,11 @@ export const updateLeaveStatus = async (req: AuthRequest, res: Response) => {
     const userDoc = await User.findById(leave.userId).session(session);
     if (!userDoc) throw new Error('User not found');
 
-    // Handle balance for non-unpaid leaves
+    // Handle leave balance
     if (leave.type !== 'unpaid') {
-      // CASE: REJECTION (from pending or approved)
       if (status === 'rejected' && oldStatus !== 'rejected') {
-        userDoc.leaveBalances[leave.type] += totalDays;
+        userDoc.leaveBalances[leave.type] = (userDoc.leaveBalances[leave.type] ?? 0) + totalDays;
         await userDoc.save({ session });
-      }
-      // CASE: APPROVAL (no balance change, already deducted on apply)
-      if (status === 'approved' && oldStatus !== 'approved') {
-        // Prevent overlapping approved leaves
-        const overlap = await LeaveRequest.findOne({
-          _id: { $ne: leave._id },
-          userId: leave.userId,
-          status: 'approved',
-          $or: [
-            { startDate: { $lte: leave.endDate, $gte: leave.startDate } },
-            { endDate: { $gte: leave.startDate, $lte: leave.endDate } },
-            { startDate: { $lte: leave.startDate }, endDate: { $gte: leave.endDate } },
-          ],
-        }).session(session);
-        if (overlap) {
-          await session.abortTransaction();
-          return res.status(400).json({ message: 'Overlapping approved leave exists' });
-        }
       }
     }
 
@@ -181,7 +160,6 @@ export const updateLeaveStatus = async (req: AuthRequest, res: Response) => {
     await leave.save({ session });
     await session.commitTransaction();
     session.endSession();
-
     res.json({ leave });
   } catch (err) {
     await session.abortTransaction();
@@ -189,10 +167,9 @@ export const updateLeaveStatus = async (req: AuthRequest, res: Response) => {
     console.error(err);
     res.status(500).json({ message: 'Server error' });
   }
-};
+};;
 
 
-// Cancel leave (Employee)
 export const cancelLeave = async (req: AuthRequest, res: Response) => {
   const session = await mongoose.startSession();
   session.startTransaction();
@@ -207,10 +184,11 @@ export const cancelLeave = async (req: AuthRequest, res: Response) => {
       return res.status(400).json({ message: 'Only pending or approved leaves can be cancelled' });
 
     const totalDays = calculateTotalDays(leave.startDate, leave.endDate, false);
+
     if (leave.type !== 'unpaid') {
       const userDoc = await User.findById(user._id).session(session);
       if (!userDoc) throw new Error('User not found');
-      userDoc.leaveBalances[leave.type] += totalDays;
+      userDoc.leaveBalances[leave.type] = (userDoc.leaveBalances[leave.type] ?? 0) + totalDays;
       await userDoc.save({ session });
     }
 
@@ -235,33 +213,27 @@ export const cancelLeave = async (req: AuthRequest, res: Response) => {
   }
 };
 
-
-
-
 // List leaves
 export const listLeaves = async (req: AuthRequest, res: Response) => {
   try {
     const user = req.user!;
-    const { status, type, from, to } = req.query;
+    const { status, type, from, to } = req.query as { status?: string; type?: string; from?: string; to?: string };
 
     let filter: any = {};
 
     if (user.role === 'employee') {
       filter.userId = user._id;
     } else if (user.role === 'manager') {
-      // Find users managed by this manager
       const teamMembers = await User.find({ managerId: user._id }).select('_id');
       const teamMemberIds = teamMembers.map(u => u._id);
-
       filter.userId = { $in: teamMemberIds };
     }
-    // HR and Admin see all (no userId filter)
 
     if (status) filter.status = status;
     if (type) filter.type = type;
     if (from || to) filter.startDate = {};
-    if (from) filter.startDate.$gte = new Date(from as string);
-    if (to) filter.startDate.$lte = new Date(to as string);
+    if (from) filter.startDate.$gte = new Date(from);
+    if (to) filter.startDate.$lte = new Date(to);
 
     const leaves = await LeaveRequest.find(filter)
       .sort({ createdAt: -1 })
@@ -273,7 +245,6 @@ export const listLeaves = async (req: AuthRequest, res: Response) => {
     res.status(500).json({ message: 'Server error' });
   }
 };
-
 
 
 
@@ -305,7 +276,7 @@ export const editLeave = async (req: AuthRequest, res: Response) => {
     if (start > end) return res.status(400).json({ message: 'Start date cannot be after end date' });
 
     const totalDays = calculateTotalDays(start, end);
-    const oldDays = calculateTotalDays(leave.startDate, leave.endDate);
+    const oldDays = calculateTotalDays(leave.startDate!, leave.endDate!, false);
     const oldType = leave.type;
 
     const userDoc = await User.findById(user._id).session(session);
@@ -581,15 +552,13 @@ export const exportEmployeeDirectory = async (req: AuthRequest, res: Response) =
 
 
 
-function formatDateForExcel(date: Date): string {
+// Format dates for Excel (safe)
+function formatDateForExcel(date?: Date | string): string {
   if (!date) return '';
-
-  // Format as YYYY-MM-DD which Excel recognizes as a date
   const d = new Date(date);
   const year = d.getFullYear();
   const month = String(d.getMonth() + 1).padStart(2, '0');
   const day = String(d.getDate()).padStart(2, '0');
-
   return `${year}-${month}-${day}`;
 }
 

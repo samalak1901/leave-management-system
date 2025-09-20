@@ -1,11 +1,9 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Calendar, 
-  Clock, 
   CheckCircle, 
   XCircle, 
   AlertCircle,
-  Edit,
   Trash2,
   Filter,
   MessageSquare,

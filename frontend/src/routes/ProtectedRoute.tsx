@@ -4,7 +4,7 @@ import { AuthContext } from "../context/AuthContext";
 
 interface Props {
     children: JSX.Element;
-    role?: "employee" | "manager" | "hr";
+    role?: "employee" | "manager" | "hr" | "admin";
 }
 
 const ProtectedRoute = ({ children, role }: Props) => {

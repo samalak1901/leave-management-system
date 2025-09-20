@@ -7,9 +7,10 @@ interface EmployeeDetailsProps {
   employee: User;
   isOpen: boolean;
   onClose: () => void;
+  onUpdate: (updatedEmployee: User) => void;
 }
 
-const EmployeeDetails: React.FC<EmployeeDetailsProps> = ({ employee, isOpen, onClose }) => {
+const EmployeeDetails: React.FC<EmployeeDetailsProps> = ({ employee, isOpen, onClose,onUpdate }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState<User>({
     _id: employee._id || '',

@@ -10,13 +10,29 @@ import {
   Home,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import type { User as UserType } from '../../types/index';
 
-const Sidebar: React.FC = () => {
+
+// Define SidebarProps to accept currentPage and setCurrentPage
+interface SidebarProps {
+  currentPage: string;
+  setCurrentPage: (page: string) => void;
+}
+
+// Define the shape of navigation items
+interface NavItem {
+  id: string;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+  path: string;
+}
+
+const Sidebar: React.FC<SidebarProps> = ({ currentPage, setCurrentPage }) => {
   const { user } = useAuth();
-  const location = useLocation(); 
+  const location = useLocation();
 
-  const getNavigationItems = () => {
-    const baseItems = [
+  const getNavigationItems = (): NavItem[] => {
+    const baseItems: NavItem[] = [
       { id: 'dashboard', label: 'Dashboard', icon: Home, path: '/dashboard' },
       { id: 'profile', label: 'My Profile', icon: User, path: '/profile' },
     ];
@@ -64,6 +80,7 @@ const Sidebar: React.FC = () => {
               <li key={item.id}>
                 <Link
                   to={item.path}
+                  onClick={() => setCurrentPage(item.id)} // Update currentPage on click
                   className={`w-full flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors ${
                     isActive
                       ? 'bg-indigo-100 text-indigo-700 border-r-2 border-indigo-700'

@@ -6,24 +6,46 @@ import {
   Eye,
   Search,
   Shield,
-  Download
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import type { User } from '../../types/index';
 import EmployeeDetails from './EmployeeDetails';
 import { userService } from '../../api/UserService';
 
+// Define the User type (ensure this matches the actual definition in ../../types/index)
+interface User {
+  _id: string;
+  name: string;
+  email: string;
+  role: 'employee' | 'manager' | 'hr' | 'admin'; // Include all possible roles
+  leaveBalances: {
+    annual: number;
+    sick: number;
+    personal?: number; // Optional, if used elsewhere
+  };
+  designation?: string; // Optional, based on other errors
+}
+
+// Define the EmployeeDetailsProps interface to fix the TS2322 error
+interface EmployeeDetailsProps {
+  employee: User;
+  isOpen: boolean;
+  onClose: () => void;
+  onUpdate: (updatedEmployee: User) => void; // Add the missing onUpdate prop
+}
+
 const EmployeeList: React.FC = () => {
   const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedRole, setSelectedRole] = useState('all');
+  const [selectedRole, setSelectedRole] = useState<string>('all');
   const [selectedEmployee, setSelectedEmployee] = useState<User | null>(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [employees, setEmployees] = useState<User[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
-  const hasPermission = user?.role === 'hr';
+  // Update hasPermission to include 'admin' based on other errors
+  const hasPermission = user?.role === 'hr' || user?.role === 'admin';
 
   useEffect(() => {
     const fetchEmployees = async () => {
@@ -40,8 +62,10 @@ const EmployeeList: React.FC = () => {
       }
     };
 
-    fetchEmployees();
-  }, []);
+    if (hasPermission) {
+      fetchEmployees();
+    }
+  }, [hasPermission]);
 
   const handleEmployeeUpdate = (updatedEmployee: User) => {
     setEmployees(prev =>
@@ -70,7 +94,8 @@ const EmployeeList: React.FC = () => {
     const displays: Record<string, string> = {
       employee: 'Employee',
       manager: 'Manager',
-      hr: 'HR Manager'
+      hr: 'HR Manager',
+      admin: 'Admin', // Add admin role
     };
     return displays[role] || role;
   };
@@ -79,13 +104,14 @@ const EmployeeList: React.FC = () => {
     const colors: Record<string, string> = {
       employee: 'bg-blue-100 text-blue-800',
       manager: 'bg-green-100 text-green-800',
-      hr: 'bg-purple-100 text-purple-800'
+      hr: 'bg-purple-100 text-purple-800',
+      admin: 'bg-red-100 text-red-800', // Add admin role
     };
     return colors[role] || 'bg-gray-100 text-gray-800';
   };
 
   const getTotalLeaveBalance = (leaveBalances: User['leaveBalances']) => {
-    return leaveBalances.annual + leaveBalances.sick;
+    return (leaveBalances.annual || 0) + (leaveBalances.sick || 0);
   };
 
   const handleViewEmployee = (employee: User) => {
@@ -98,7 +124,6 @@ const EmployeeList: React.FC = () => {
     setSelectedEmployee(null);
   };
 
-
   if (!hasPermission) {
     return (
       <div className="p-6">
@@ -106,7 +131,7 @@ const EmployeeList: React.FC = () => {
           <Shield className="mx-auto h-12 w-12 text-red-400" />
           <h3 className="mt-4 text-lg font-medium text-gray-900">Access Denied</h3>
           <p className="mt-2 text-sm text-gray-500">
-            You don't have permission to view the employee list. This feature is only available to HR users.
+            You don't have permission to view the employee list. This feature is only available to HR and Admin users.
           </p>
         </div>
       </div>
@@ -139,7 +164,6 @@ const EmployeeList: React.FC = () => {
               Manage employee profiles and leave information
             </p>
           </div>
-         
         </div>
 
         <div className="bg-white rounded-lg shadow p-4 mb-6">

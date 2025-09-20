@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { User, Lock, AlertCircle } from 'lucide-react';
+import { User as UserIcon, Lock, AlertCircle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 const LoginPage: React.FC = () => {
@@ -7,33 +7,38 @@ const LoginPage: React.FC = () => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [showCredentials, setShowCredentials] = useState(false);
-  
+
   const { login, isLoading } = useAuth();
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError('');
-    
+
     if (!email || !password) {
       setError('Please fill in all fields');
       return;
     }
 
-    const success = await login(email, password);
-    if (!success) {
-      setError('Invalid credentials');
+    try {
+      const success: boolean = await login(email, password);
+      if (!success) {
+        setError('Invalid credentials');
+      }
+    } catch (err) {
+      setError('An error occurred during login');
+      console.error(err);
     }
   };
 
   const demoCredentials = [
     { role: 'Employee', email: 'employee@example.com', password: 'password123' },
     { role: 'Manager', email: 'manager@example.com', password: 'password123' },
-    { role: 'HR/Admin', email: 'hr@example.com', password: 'password123' }
+    { role: 'HR/Admin', email: 'hr@example.com', password: 'password123' },
   ];
 
   const quickLogin = (email: string) => {
     setEmail(email);
-    setPassword('password');
+    setPassword('password123'); // match demo password
   };
 
   return (
@@ -41,19 +46,18 @@ const LoginPage: React.FC = () => {
       <div className="max-w-md w-full space-y-8">
         <div className="text-center">
           <div className="mx-auto h-12 w-12 bg-indigo-600 rounded-xl flex items-center justify-center">
-            <User className="h-8 w-8 text-white" />
+            <UserIcon className="h-8 w-8 text-white" />
           </div>
           <h2 className="mt-6 text-3xl font-bold text-gray-900">
             Leave Management System
           </h2>
-          <p className="mt-2 text-sm text-gray-600">
-            Sign in to your account
-          </p>
+          <p className="mt-2 text-sm text-gray-600">Sign in to your account</p>
         </div>
 
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
           <div className="rounded-lg bg-white p-6 shadow-lg">
             <div className="space-y-4">
+              {/* Email */}
               <div>
                 <label htmlFor="email" className="block text-sm font-medium text-gray-700">
                   Email Address
@@ -63,16 +67,16 @@ const LoginPage: React.FC = () => {
                     id="email"
                     name="email"
                     type="email"
-                    required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="block w-full px-3 py-2 pl-10 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
                     placeholder="Enter your email"
+                    className="block w-full px-3 py-2 pl-10 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
                   />
-                  <User className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
+                  <UserIcon className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
                 </div>
               </div>
 
+              {/* Password */}
               <div>
                 <label htmlFor="password" className="block text-sm font-medium text-gray-700">
                   Password
@@ -82,16 +86,16 @@ const LoginPage: React.FC = () => {
                     id="password"
                     name="password"
                     type="password"
-                    required
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="block w-full px-3 py-2 pl-10 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
                     placeholder="Enter your password"
+                    className="block w-full px-3 py-2 pl-10 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
                   />
                   <Lock className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
                 </div>
               </div>
 
+              {/* Error */}
               {error && (
                 <div className="flex items-center space-x-2 text-red-600 text-sm">
                   <AlertCircle className="h-4 w-4" />
@@ -99,6 +103,7 @@ const LoginPage: React.FC = () => {
                 </div>
               )}
 
+              {/* Submit Button */}
               <button
                 type="submit"
                 disabled={isLoading}
@@ -110,6 +115,7 @@ const LoginPage: React.FC = () => {
           </div>
         </form>
 
+        {/* Demo credentials */}
         <div className="bg-white rounded-lg p-4 shadow-lg">
           <button
             onClick={() => setShowCredentials(!showCredentials)}
@@ -117,7 +123,7 @@ const LoginPage: React.FC = () => {
           >
             {showCredentials ? 'Hide' : 'Show'} Demo Credentials
           </button>
-          
+
           {showCredentials && (
             <div className="mt-3 space-y-2">
               {demoCredentials.map((cred, index) => (

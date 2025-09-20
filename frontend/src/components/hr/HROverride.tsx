@@ -39,8 +39,8 @@ const HROverride: React.FC<HROverrideProps> = ({ request, onClose, onOverride })
     setError(null);
     
     try {
-      await leaveService.updateStatus(request.id, selectedAction, hrComment);
-      onOverride(request.id, selectedAction, hrComment);
+      await leaveService.updateStatus(request._id, selectedAction, hrComment);
+      onOverride(request._id, selectedAction, hrComment);
     } catch (error) {
       console.error('Error submitting override:', error);
       setError('Failed to override leave request. Please try again.');

@@ -53,8 +53,8 @@ const EditLeavePage: React.FC<EditLeavePageProps> = ({ requestId, onBack }) => {
                 }
                 const item = leaves[0];
                 const request: LeaveRequest = {
-                    id: item._id,
-                    employeeId: item.userId._id,
+                    id: item?._id,
+                    employeeId: item?.userId?._id,
                     employeeName: item.userId.name,
                     employeeDesignation: item.userId.designation || '',
                     employeeDepartment: item.userId.department || '',

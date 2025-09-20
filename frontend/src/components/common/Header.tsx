@@ -53,7 +53,7 @@ const Header: React.FC = () => {
             <div className="hidden md:block text-right">
               <div className="text-sm font-medium text-gray-900">{user?.name}</div>
               <div className="flex items-center space-x-2">
-                <span className="text-xs text-gray-500">{user?.designation}</span>
+                <span className="text-xs text-gray-500">{user?.designation || "N/A"}</span>
                 <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${getRoleBadgeColor(user?.role || '')}`}>
                   {getRoleDisplay(user?.role || '')}
                 </span>

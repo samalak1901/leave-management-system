@@ -25,7 +25,7 @@ const ReportsPage: React.FC = () => {
     role: ''
   });
 
-  if (user?.role !== 'hr' && user?.role !== 'admin') {
+  if (user?.role !== 'hr') {
     return (
       <div className="p-6">
         <div className="max-w-md mx-auto text-center">

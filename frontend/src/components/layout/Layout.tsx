@@ -1,14 +1,14 @@
-import React, { ReactNode } from 'react';
+import React, { ReactNode, useState } from 'react';
 import Header from '../common/Header';
 import Sidebar from '../common/Sidebar';
 
 interface LayoutProps {
   children: ReactNode;
-  currentPage: string;
-  setCurrentPage: (page: string) => void;
 }
 
-const Layout: React.FC<LayoutProps> = ({ children, currentPage, setCurrentPage }) => {
+const Layout: React.FC<LayoutProps> = ({ children }) => {
+  const [currentPage, setCurrentPage] = useState<string>('dashboard');
+
   return (
     <div className="min-h-screen bg-gray-50">
       <Header />
